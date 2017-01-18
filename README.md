@@ -11,3 +11,9 @@ How to compile:
    <PathToNsisInstallationFolder>\Bin\makensis.exe stopServiceAndShowProgressBar.nsh
    ```
 3. Start test.exe
+
+<br/>
+
+<p align="center">
+   <img src="https://github.com/varad/NSIS_StopWinServiceAndShowProgressBar/blob/master/screenshot.png" alt="Screenshot"/>
+</p>   
