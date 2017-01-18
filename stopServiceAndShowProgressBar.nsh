@@ -11,11 +11,12 @@ Section "EveryNsisScriptRequiresAtLeastOneSection"
 SectionEnd
 
 
-!define SERVICE_NAME "SnowMirror"        ; Name of the service to stop 
+!define SERVICE_NAME "MyService"         ; Name of the service to stop 
 !define MAX_WAIT_TIME_MILLIS 90000       ; How long to wait for the service to stop
 !define STOP_SERVICE_TIMER_INTERVAL 500  ; How often to check if the service has already stopped
 Var StopService_MillisCounter            ; How long we have already waited for the service to stop
 Var StopService_status                   ; Current state of the service
+Var StopService_isInstalled              ; Is the service installed?
 Var StopService_statusLabelHwnd          ; HWND of the label  
 Var StopService_progressBarHwnd          ; HWND of the progress bar 
 
@@ -39,12 +40,25 @@ Function page.custom
   ; Reset the counter
   StrCpy $StopService_MillisCounter 1000
   
-  ; Stop the service
-  Call StopService_stop
+  ; Is the service installed?
+  Call StopService_isInstalled
   
-  ; Repeatedly check service status and move the progress bar
-  ${NSD_CreateTimer} StopServiceCallback ${STOP_SERVICE_TIMER_INTERVAL}
+  ${If} $StopService_isInstalled == "true"
+  
+    ; Stop the service
+    Call StopService_stop
+  
+    ; Repeatedly check service status and move the progress bar
+    ${NSD_CreateTimer} StopServiceCallback ${STOP_SERVICE_TIMER_INTERVAL}
+    
+  ${Else}
+  
+    Call StopService_makeStatusLabelRed
+    SendMessage $StopService_statusLabelHwnd ${WM_SETTEXT} 0 "STR:Service ${SERVICE_NAME} is not installed."
+    SendMessage $StopService_progressBarHwnd ${PBM_SETPOS} 100 0
  
+  ${EndIf}
+  
   ; Show GUI
   nsDialogs::Show
   
@@ -63,6 +77,7 @@ Function StopServiceCallback
     SendMessage $StopService_statusLabelHwnd ${WM_SETTEXT} 0 "STR:Service ${SERVICE_NAME} has been successfully stopped."
     ${NSD_KillTimer} StopServiceCallback
   ${ElseIf} $StopService_MillisCounter >= ${MAX_WAIT_TIME_MILLIS}
+    Call StopService_makeStatusLabelRed
     SendMessage $StopService_statusLabelHwnd ${WM_SETTEXT} 0 "STR:Failed to stop ${SERVICE_NAME} service."
     ${NSD_KillTimer} StopServiceCallback
   ${Else}
@@ -100,5 +115,25 @@ Function StopService_stop
   Push "stop"
   Push "${SERVICE_NAME}"
   Push ""
+  Call Service 
+FunctionEnd
+
+
+;
+; Is the service installed?
+;
+Function StopService_isInstalled
+  Push "installed"
+  Push "${SERVICE_NAME}"
+  Push ""
   Call Service
+  Pop $StopService_isInstalled 
+FunctionEnd
+
+
+;
+; Sets a color of status label to red
+;
+Function StopService_makeStatusLabelRed
+  SetCtlColors $StopService_statusLabelHwnd 0xFF0000 transparent
 FunctionEnd  
